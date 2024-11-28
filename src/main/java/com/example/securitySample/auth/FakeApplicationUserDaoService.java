@@ -17,6 +17,7 @@ public class FakeApplicationUserDaoService implements ApplicationUserDao {
     private final PasswordEncoder PASSWORD_ENCODER;
 
     public FakeApplicationUserDaoService(PasswordEncoder password_encoder) {
+
         PASSWORD_ENCODER = password_encoder;
     }
 

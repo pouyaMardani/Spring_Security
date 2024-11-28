@@ -1,24 +1,29 @@
 package com.example.securitySample.security;
 
 import com.example.securitySample.auth.ApplicationUserService;
+import com.example.securitySample.jwt.JwtTokenVerifier;
+import com.example.securitySample.jwt.JwtUsernameAndPasswordAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 
 @Configuration
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-public class ApplicationSecurityConfig  {
+public class ApplicationSecurityConfig {
 
     private final PasswordEncoder PASSWORD_ENCODER;
     private final ApplicationUserService applicationUserService;
+
 
     @Autowired
     public ApplicationSecurityConfig(PasswordEncoder passwordEncoder, ApplicationUserService applicationUserService) {
@@ -27,26 +32,37 @@ public class ApplicationSecurityConfig  {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-         http
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+        http
                 .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .addFilter(new JwtUsernameAndPasswordAuthenticationFilter(authenticationManager))
+                .addFilterAfter(new JwtTokenVerifier(), JwtUsernameAndPasswordAuthenticationFilter.class)
+
                 .authorizeHttpRequests((auth) ->
-                                auth
-                                        .requestMatchers("/api/**").hasRole(ApplicationUserRole.STUDENT.name())
-                                        .anyRequest().authenticated()
+                        auth
+                                .requestMatchers("/api/**").hasRole(ApplicationUserRole.STUDENT.name())
+                                .anyRequest().authenticated()
 
                 )
-                 .formLogin().loginPage("/login").permitAll().defaultSuccessUrl("/index.html",true)
-                 .and()
-                 .logout()
-                 .logoutUrl("/logout")
-                 .clearAuthentication(true)
-                 .invalidateHttpSession(true)
-                 .deleteCookies("JSESSIONID")
-                 .logoutSuccessUrl("/login")
-                 ;
+               /* .formLogin().loginPage("/login").permitAll().defaultSuccessUrl("/index.html", true)
+                .and()
+                .logout()
+                .logoutUrl("/logout")
+                .clearAuthentication(true)
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
+                .logoutSuccessUrl("/login")*/
+        ;
 
-         return http.build();
+        return http.build();
+    }
+
+
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(AuthenticationManagerBuilder.class).build();
     }
 
 
